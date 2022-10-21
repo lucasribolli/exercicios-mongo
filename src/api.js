@@ -16,7 +16,8 @@ app.listen(8000, function () {
 const { MongoClient } = require('mongodb');
 const HOSPITAL_DB = 'Hospistal';
 
-const COLLECTION_PACIENTES = 'Pacientes';
+const COLLECTION_PACIENTES_SEM_FK = 'Pacientes_Sem_Fk';
+const COLLECTION_PACIENTES_COM_FK = 'Pacientes_Com_Fk';
 const COLLECTION_CONVENIOS = 'Convenios';
 const COLLECTION_EXAMES = 'Exames';
 const COLLECTION_CONSULTAS = 'Consultas';
@@ -26,6 +27,7 @@ app.get('/', (req, res) => {
   const client = getClient();
   client.connect(async function (_) {
     let db = client.db(HOSPITAL_DB);
+    // 1
     let pacientesSemFK = [
       {
         "_id": new ObjectID(),
@@ -73,10 +75,11 @@ app.get('/', (req, res) => {
         ]
       }
     ];
-    let pacientesSemFKCollection = db.collection(COLLECTION_PACIENTES);
+    let pacientesSemFKCollection = db.collection(COLLECTION_PACIENTES_SEM_FK);
     pacientesSemFKCollection.remove();
     pacientesSemFKCollection.insertMany(pacientesSemFK)
 
+    // 2
     let convenio1ID = new ObjectID();
     let convenio2ID = new ObjectID();
     let convenios = [
@@ -152,13 +155,37 @@ app.get('/', (req, res) => {
         ]
       }
     ];
-    let pacientesComFKCollection = db.collection(COLLECTION_PACIENTES);
+    let pacientesComFKCollection = db.collection(COLLECTION_PACIENTES_COM_FK);
+    pacientesComFKCollection.remove()
     pacientesComFKCollection.insertMany(pacientesComFK);
 
 
-    res.json({
-      "ok": "200"
-    })
+    // a)
+    pacientesSemFKCollection.find( { Convenios: { $elemMatch: { Nome : "Unimed"} } } )
+    .toArray(function (err, result) {
+      if (err) {
+        res.status(400).send('Error on auth ' + err);
+      } else {
+        res.json({
+          "exames_convenio_unimed_sem_fk": result[0]['Exames']
+        });
+      }
+    });
+
+    // pacientesComFKCollection.find( { Convenios: { $elemMatch: { _id : convenio1ID } } } )
+    // .toArray(function (err, result) {
+    //   if (err) {
+    //     res.status(400).send('Error on auth ' + err);
+    //   } else {
+    //     res.json({
+    //       "res": result
+    //     });
+    //   }
+    // });
+
+    // res.json({
+    //   "ok": "200"
+    // })
   })
   client.close();
 });
