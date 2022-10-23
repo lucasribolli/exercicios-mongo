@@ -175,9 +175,9 @@ app.get('/', async function (req, res) {
     }
 
     let exercicio = req.query.exercicio;
-    // a)
+    // a) Escreva e teste comandos para recuperar os exames feitos pelos pacientes 
+    // que têm um certo convênios em cada uma das estruturas; 
     if(exercicio == 'a_sem_fk') {
-      console.log("a_sem_fk");
       pacientesSemFKCollection
         .find( { Convenios: { $elemMatch: { Nome : "Unimed"} } } )
         .toArray(function (err, result) {
@@ -207,7 +207,38 @@ app.get('/', async function (req, res) {
       res.json({
         "exames_convenio_unimed_com_fk": exames
       });
-    } 
+    }
+    // b) Escreva e teste comandos para recuperar os pacientes que marcaram consulta 
+    // com médicos com uma determinada especialidade;
+    else if(exercicio == 'b_sem_fk') {
+      // TODO pegar médico clinico geral dentro de Convenios
+      var clinicoGeral = await pacientesSemFKCollection.find({ 
+        Convenios: {
+          $in: {
+            
+          }
+        }
+      });
+      clinicoGeral = await clinicoGeral.toArray();
+      let clinicoGeralId = clinicoGeral[0]._id;
+      pacientesSemFKCollection
+        .find({ 
+          Medicos: { 
+            $elemMatch: { 
+              Especialidades : { 
+                $in: [ clinicoGeralId ] 
+              }
+            }
+          }
+        })
+        .toArray(function (err, result) {
+          if (!err) {
+            res.json({
+              "clinico_geral_sem_fk": result
+            });
+          }
+        });
+    }
     else {
       res.send();
     }
