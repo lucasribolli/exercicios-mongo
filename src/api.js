@@ -23,7 +23,12 @@ const COLLECTION_EXAMES = 'Exames';
 const COLLECTION_CONSULTAS = 'Consultas';
 
 
-app.get('/', (req, res) => {
+app.get('/', async function (req, res) {
+  var reinsertAll = req.params.reinsert;
+  if(reinsertAll == null) {
+    reinsertAll = false;
+  }
+  console.log("reinsertAll -> " + reinsertAll);
   const client = getClient();
   client.connect(async function (_) {
     let db = client.db(HOSPITAL_DB);
@@ -76,8 +81,10 @@ app.get('/', (req, res) => {
       }
     ];
     let pacientesSemFKCollection = db.collection(COLLECTION_PACIENTES_SEM_FK);
-    pacientesSemFKCollection.remove();
-    pacientesSemFKCollection.insertMany(pacientesSemFK)
+    if(reinsertAll) {
+      await pacientesSemFKCollection.remove();
+      await pacientesSemFKCollection.insertMany(pacientesSemFK)
+    }
 
     // 2
     let convenio1ID = new ObjectID();
@@ -95,8 +102,10 @@ app.get('/', (req, res) => {
       }
     ];
     let conveniosCollection = db.collection(COLLECTION_CONVENIOS);
-    conveniosCollection.remove();
-    conveniosCollection.insertMany(convenios);
+    if(reinsertAll) {
+      await conveniosCollection.remove();
+      await conveniosCollection.insertMany(convenios);
+    }
 
     let exameID = new ObjectID();
     let exames = [
@@ -107,8 +116,10 @@ app.get('/', (req, res) => {
       }
     ];
     let examesCollection = db.collection(COLLECTION_EXAMES);
-    examesCollection.remove();
-    examesCollection.insertMany(exames);
+    if(reinsertAll) {
+      await examesCollection.remove();
+      await examesCollection.insertMany(exames);
+    }
 
 
     let consultaID = new ObjectID();
@@ -131,8 +142,10 @@ app.get('/', (req, res) => {
       }
     ];
     let consultasCollection = db.collection(COLLECTION_CONSULTAS);
-    consultasCollection.remove();
-    consultasCollection.insertMany(consultas);
+    if(reinsertAll) {
+      await consultasCollection.remove();
+      await consultasCollection.insertMany(consultas);
+    }
 
 
     let pacientesComFK = [
@@ -156,38 +169,51 @@ app.get('/', (req, res) => {
       }
     ];
     let pacientesComFKCollection = db.collection(COLLECTION_PACIENTES_COM_FK);
-    pacientesComFKCollection.remove()
-    pacientesComFKCollection.insertMany(pacientesComFK);
+    if(reinsertAll) {
+      await pacientesComFKCollection.remove()
+      await pacientesComFKCollection.insertMany(pacientesComFK);
+    }
 
-
+    let exercicio = req.query.exercicio;
     // a)
-    pacientesSemFKCollection.find( { Convenios: { $elemMatch: { Nome : "Unimed"} } } )
-    .toArray(function (err, result) {
-      if (err) {
-        res.status(400).send('Error on auth ' + err);
-      } else {
-        res.json({
-          "exames_convenio_unimed_sem_fk": result[0]['Exames']
+    if(exercicio == 'a_sem_fk') {
+      console.log("a_sem_fk");
+      pacientesSemFKCollection
+        .find( { Convenios: { $elemMatch: { Nome : "Unimed"} } } )
+        .toArray(function (err, result) {
+          if (!err) {
+            res.json({
+              "exames_convenio_unimed_sem_fk": result[0]['Exames']
+            });
+          }
         });
+    }
+    else if(exercicio == 'a_com_fk') {
+      var convenioUnimed = await conveniosCollection.find( { Nome: "Unimed" } );
+      convenioUnimed = await convenioUnimed.toArray();
+      let convenioUnimedId = convenioUnimed[0]._id;
+      console.log("convenioUnimed: " + convenioUnimed);
+      var pacientes = await pacientesComFKCollection.find( { Convenios: { $in: [ convenioUnimedId ] } } );
+      pacientes = await pacientes.toArray();
+      let exames = [];
+      let examesId = pacientes[0].Exames;
+      for (var i = 0; i < examesId.lenght; i++) {
+        let exameId = examesId[i];
+        console.log("exameId -> " + exameId);
+        var exame = await examesCollection.find( { _id: exameId } );
+        exame = await exame.toArray();
+        exame = exame[0];
+        exames.push(exame)
       }
-    });
-
-    // pacientesComFKCollection.find( { Convenios: { $elemMatch: { _id : convenio1ID } } } )
-    // .toArray(function (err, result) {
-    //   if (err) {
-    //     res.status(400).send('Error on auth ' + err);
-    //   } else {
-    //     res.json({
-    //       "res": result
-    //     });
-    //   }
-    // });
-
-    // res.json({
-    //   "ok": "200"
-    // })
-  })
-  client.close();
+      res.json({
+        "exames_convenio_unimed_com_fk": exames
+      });
+    } 
+    else {
+      res.send();
+    }
+  });
+  console.log("closing connection")
 });
 
 function getClient() {
