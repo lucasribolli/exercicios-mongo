@@ -196,11 +196,10 @@ app.get('/', async function (req, res) {
       var pacientes = await pacientesComFKCollection.find( { Convenios: { $in: [ convenioUnimedId ] } } );
       pacientes = await pacientes.toArray();
       let exames = [];
-      let examesId = pacientes[0].Exames;
-      for (var i = 0; i < examesId.lenght; i++) {
-        let exameId = examesId[i];
+      let examesIds = pacientes[0].Exames;
+      for (const exameId in examesIds) {
         console.log("exameId -> " + exameId);
-        var exame = await examesCollection.find( { _id: exameId } );
+        var exame = await examesCollection.find( { _id: examesIds[exameId] } );
         exame = await exame.toArray();
         exame = exame[0];
         exames.push(exame)
