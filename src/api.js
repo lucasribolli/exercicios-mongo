@@ -212,21 +212,29 @@ app.get('/', async function (req, res) {
     // com médicos com uma determinada especialidade;
     else if(exercicio == 'b_sem_fk') {
       // TODO pegar médico clinico geral dentro de Convenios
-      var clinicoGeral = await pacientesSemFKCollection.find({ 
+      /* var clinicoGeral = await pacientesSemFKCollection.find({ 
         Convenios: {
-          $in: {
-            
-          }
+          $in: []
         }
       });
       clinicoGeral = await clinicoGeral.toArray();
-      let clinicoGeralId = clinicoGeral[0]._id;
+      let clinicoGeralId = clinicoGeral[0]._id; */
       pacientesSemFKCollection
         .find({ 
-          Medicos: { 
-            $elemMatch: { 
-              Especialidades : { 
-                $in: [ clinicoGeralId ] 
+          Consultas: {
+            $elemMatch: {
+              $in: {
+                'Medico': { 
+                  $elemMatch: { 
+                    Especialidades : { 
+                       $elemMatchin: {
+                         $in: {
+                            Nome: 'Clinico geral' 
+                          }
+                       }
+                    }
+                  }
+                }
               }
             }
           }
