@@ -175,8 +175,7 @@ app.get('/', async function (req, res) {
     }
 
     let exercicio = req.query.exercicio;
-    // a) Escreva e teste comandos para recuperar os exames feitos pelos pacientes 
-    // que têm um certo convênios em cada uma das estruturas; 
+    
     if(exercicio == 'a_sem_fk') {
       pacientesSemFKCollection
         .find( { Convenios: { $elemMatch: { Nome : "Unimed"} } } )
@@ -208,17 +207,7 @@ app.get('/', async function (req, res) {
         "exames_convenio_unimed_com_fk": exames
       });
     }
-    // b) Escreva e teste comandos para recuperar os pacientes que marcaram consulta 
-    // com médicos com uma determinada especialidade;
-    else if(exercicio == 'b_sem_fk') {
-      // TODO pegar médico clinico geral dentro de Convenios
-      /* var clinicoGeral = await pacientesSemFKCollection.find({ 
-        Convenios: {
-          $in: []
-        }
-      });
-      clinicoGeral = await clinicoGeral.toArray();
-      let clinicoGeralId = clinicoGeral[0]._id; */
+    else if (exercicio == 'b_sem_fk') {
       pacientesSemFKCollection
         .find({ 
           Consultas: {
@@ -246,8 +235,58 @@ app.get('/', async function (req, res) {
             });
           }
         });
-    }
-    else {
+    } else if (exercicio == 'b_com_fk') {
+      var consultasEspecializadas = await consultasCollection.find( { 
+        'Medico': { 
+          $elemMatch: { 
+            Especialidades : { 
+               $elemMatchin: {
+                 $in: {
+                    Nome: 'Clinico geral' 
+                  }
+               }
+            }
+          }
+        }
+       } );
+       consultasEspecializadas = await consulta.toArray();
+      var pacientesConsulta = await pacientesComFKCollection.find( { 
+        'Consultas': { 
+          $elemMatch: { 
+            consultasEspecializadas
+          }
+        }
+       } );
+      res.json({
+        "clinico_geral_com_fk": pacientesConsulta.toArray()
+      });
+    } else if (exercicio == 'c_sem_fk') {
+      medicosCollection
+        .find({ 
+          Exames: {
+            $elemMatch: {
+              $in: {
+                Nome: 'Exame geral' 
+              }
+            }
+          }
+        })
+    } else if (exercicio == 'c_com_fk') {
+      var examesMedicos = await examesCollection.find( { Nome: "Exame geral" } );
+      examesMedicos = await examesMedicos.toArray();
+      examesMedicos = await medicosCollection.find( 
+        {'Exames': { 
+          $elemMatchin: {
+            $in: {
+              examesMedicos
+            }
+          }
+        }}
+       );
+      res.json({  
+        "exames_com_fk": examesMedicos.toArray();
+      });
+    } else {
       res.send();
     }
   });
